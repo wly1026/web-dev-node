@@ -1,15 +1,16 @@
-let tweets = require('../data/tweets.json');
-
+const dao = require('../db/tweets/tweet-dao')
 module.exports = (app) => {
 
     const findAllTweets = (req, res) => {
-        res.json(tweets);
+        dao.findAllTweets()
+            .then(tweets => {
+                res.json(tweets);
+            })
     }
     app.get('/api/tweets', findAllTweets);
 
     const createTweet = (req, res) => {
         const newTweet = {
-            _id: (new Date()).getTime() + '',
             "portrait": "../../../images/reactjs.png",
             "userName": "ReactJS",
             "handle": "ReactJs",
@@ -27,25 +28,24 @@ module.exports = (app) => {
             },
             ...req.body.tweet,
         }
-        tweets = [
-            newTweet,
-            ...tweets
-        ];
-        res.json(newTweet);
+        dao.createTweet(newTweet)
+            .then(tweet => res.json(tweet))
     }
     app.post('/api/tweets', createTweet);
 
     const deleteTweet = (req, res) => {
         const id = req.params['id'];
-        tweets = tweets.filter(tweet => tweet._id !== id);
-        res.sendStatus(200);
+        dao.deleteTweet(id)
+            .then(status => res.send(status));
     }
     app.delete('/api/tweets/:id', deleteTweet);
 
     const likeTweet = (req, res) => {
         const id = req.params['id'];
-        tweets = tweets.map(tweet => {
-            if (tweet._id === id) {
+        dao.findTweetById(id)
+            .then(tweet => {
+                console.log("old Tweet: ");
+                console.log(tweet);
                 if (tweet.liked === true) {
                     tweet.liked = false;
                     tweet.commentTransferLove.love--;
@@ -54,12 +54,13 @@ module.exports = (app) => {
                     tweet.commentTransferLove.love++;
                 }
                 return tweet;
-            } else {
-                return tweet;
-            }
-        });
-        res.sendStatus(200);
+            })
+            .then(tweet => {
+                console.log("new Tweet: ");
+                console.log(tweet);
+                return dao.updateTweet(id, tweet);
+            })
+            .then(status => res.send(status));
     }
     app.put('/api/tweets/:id/like', likeTweet);
-
 };
